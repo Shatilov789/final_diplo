@@ -2,6 +2,7 @@ from django.contrib.auth.base_user import BaseUserManager, AbstractBaseUser
 from django.contrib.auth.models import AbstractUser, PermissionsMixin
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.db import models
+
 from django.utils.translation import gettext_lazy as _
 from django_rest_passwordreset.tokens import get_token_generator
 import jwt
@@ -10,6 +11,7 @@ from datetime import datetime
 from datetime import timedelta
 
 from django.core import validators
+from rest_framework.authtoken.models import Token
 
 STATE_CHOICES = (
     ('basket', 'СТатус корзины'),
@@ -24,40 +26,34 @@ STATE_CHOICES = (
 USER_TYPE_CHOICES = (
     ('shop', 'Магазин'),
     ('buyer', 'Покупатель'),
-
 )
 
 
 class UserManager(BaseUserManager):
-    use_in_migrations = True
 
-    def _create_user(self, email, password, **extra_fields):
-       # "Creat and save a user with the give username, email, and password."
 
-        if not email:
-            raise ValueError('The given email must be set')
-        email = self.normalize_email(email)
-        user = self.model(email=email, **extra_fields)
+
+    def create_user(self, username, email, password=None):
+
+        if username is None:
+           raise TypeError('Users must have a username.')
+        if email is None:
+           raise TypeError('Users must have an email address.')
+        user = self.model(username=username, email=self.normalize_email(email))
         user.set_password(password)
-        user.save(using=self._db)
+        user.save()
+
         return user
 
-    def create_user(self, email, password=None, **extra_fields):
-       extra_fields.setdefault('is_staff', False)
-       extra_fields.setdefault('is_superuser', False)
-       return self._create_user(email, password, **extra_fields)
+    def create_superuser(self, username, email, password):
 
-    def creat_superuser(self, email, password, **extra_fileds):
-        extra_fileds.setdefault('is_staff', True)
-        extra_fileds.setdefault('is_superuser', True)
-
-        if extra_fileds.get('is_staff') is not True:
-            raise ValueError('Superuser must have is_staff=True')
-        if extra_fileds.get('is_superuser') is not True:
-            raise ValueError('Superuser must have is_superuser=True')
-
-        return self._create_user(email, password, **extra_fileds)
-
+        if password is None:
+            raise TypeError('Superusers must have a password.')
+        user = self.create_user(username, email, password)
+        user.is_superuser = True
+        user.is_staff = True
+        user.save()
+        return user
 
 class User(AbstractBaseUser, PermissionsMixin):
     """
@@ -74,9 +70,11 @@ class User(AbstractBaseUser, PermissionsMixin):
                     'unique': _("A user with that username already exists."),
                 }
             )
-    # username = models.CharField(db_index=True, max_length=255, unique=True)
+
     company = models.CharField(verbose_name='Компания', max_length=40, blank=True)
     position = models.CharField(verbose_name='Должность', max_length=40, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     email = models.EmailField(
         validators=[validators.validate_email],
         unique=True,
@@ -85,15 +83,14 @@ class User(AbstractBaseUser, PermissionsMixin):
             'unique': _("A user with that email already exists."),
         }
         )
-
     is_staff = models.BooleanField(default=False)
-
     is_active = models.BooleanField(default=True)
     type = models.CharField(verbose_name='Тип пользователя', choices=USER_TYPE_CHOICES, max_length=5, default='buyer')
     # Свойство `USERNAME_FIELD` сообщает нам, какое поле мы будем использовать для входа.
+
     USERNAME_FIELD = 'email'
 
-    REQUIRED_FIELDS = ('username',)
+    REQUIRED_FIELDS = ['username',]
 
     # Сообщает Django, что класс UserManager, определенный выше,
     # должен управлять объектами этого типа.
@@ -104,7 +101,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         Возвращает строковое представление этого `User`.
         Эта строка используется, когда в консоли выводится `User`.
         """
-        return self.username
+        return self.email
 
     @property
     def token(self):
@@ -144,14 +141,15 @@ class User(AbstractBaseUser, PermissionsMixin):
         этого пользователя и срок его действия
         составляет 60 дней в будущем.
         """
-        dt = datetime.now() + timedelta(days=60)
+        dt = datetime.now() + timedelta(days=1)
 
         token = jwt.encode({
             'id': self.pk,
+            # 'exp': dt.strftime('%s')
             'exp': dt.utcfromtimestamp(dt.timestamp())
         }, settings.SECRET_KEY, algorithm='HS256')
 
-        return token
+        return token.decode('utf-8')
 
     class Meta:
         verbose_name = 'Пользователь'
@@ -161,7 +159,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 class Shop(models.Model):
     name = models.CharField(max_length=50, verbose_name='Название')
-    url = models.URLField(verbose_name='Ссылка',null=True, blank=True)
+    url = models.URLField(verbose_name='Ссылка', null=True, blank=True)
     user = models.OneToOneField(User, verbose_name='Пользователь',
                                 blank=True, null=True,
                                 on_delete=models.CASCADE)
@@ -217,9 +215,10 @@ class ProductInfo(models.Model):
     class Meta:
         verbose_name = 'Информация о продукте'
         verbose_name_plural = 'Информационный список о продуктах'
-        constraints = [
-            models.UniqueConstraint(fields=['product', 'shop', 'external_id'], name='unique_product_info'),
-        ]
+        db_table = 'products_info'
+        # constraints = [
+        #     models.UniqueConstraint(fields=['product', 'shop', 'external_id'], name='unique_product_info'),
+        # ]
 
 
 class Parameter(models.Model):
@@ -245,9 +244,9 @@ class ProductParameter(models.Model):
     class Meta:
         verbose_name = 'Параметр'
         verbose_name_plural = 'Список параметров'
-        constraints = [
-            models.UniqueConstraint(fields=['product_info', 'parameter'], name='unique_product_parameter'),
-        ]
+        # constraints = [
+        #     models.UniqueConstraint(fields=['product_info', 'parameter'], name='unique_product_parameter'),
+        # ]
 
 
 class Contact(models.Model):
@@ -304,9 +303,9 @@ class OrderItem(models.Model):
     class Meta:
         verbose_name = 'Заказанная позиция'
         verbose_name_plural = 'Список заказанных позиций'
-        constraints = [
-            models.UniqueConstraint(fields=['order_id', 'product_info'], name='unique_order_item'),
-        ]
+        # constraints = [
+        #     models.UniqueConstraint(fields=['order_id', 'product_info'], name='unique_order_item'),
+        # ]
 
 
 class ConfirmEmailToken(models.Model):
@@ -336,3 +335,4 @@ class ConfirmEmailToken(models.Model):
 
     def __str__(self):
         return "Password reset token for user {user}".format(user=self.user)
+

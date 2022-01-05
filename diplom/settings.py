@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 """
 
 from pathlib import Path
+import datetime
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -38,11 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'django_rest_passwordreset',
     'service',
-
-
-
+    'rest_framework_simplejwt',
 
 ]
 
@@ -84,13 +82,13 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'diplo',
-        'USER': '',
-        'PASSWORD': '',
+        'USER': 'postgres',
+        'PASSWORD': 'Po625493',
         'HOST': '127.0.0.1',
         'PORT': '5432',
     }
 }
-AUTH_USER_MODEL="service.User"
+AUTH_USER_MODEL = "service.User"
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
@@ -132,3 +130,15 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+REST_FRAMEWORK = {
+    'EXCEPTION_HANDLER': 'diplom.exceptions.core_exception_handler',
+    'NON_FIELD_ERRORS_KEY': 'error',
+
+
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'service.authentication.JWTAuthentication',
+        ),
+}
+
+
