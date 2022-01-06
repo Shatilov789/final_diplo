@@ -55,6 +55,7 @@ class UserManager(BaseUserManager):
         user.save()
         return user
 
+
 class User(AbstractBaseUser, PermissionsMixin):
     """
     Определяет наш пользовательский класс User.

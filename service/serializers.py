@@ -27,11 +27,12 @@ class LoginSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=255, read_only=True)
     password = serializers.CharField(max_length=128, write_only=True)
     token = serializers.CharField(max_length=255, read_only=True)
-
+    type = serializers.CharField(max_length=255, read_only=True)
     def validate(self, data):
 
         email = data.get('email', None)
         password = data.get('password', None)
+
 
         if email is None:
             raise serializers.ValidationError(
@@ -58,9 +59,9 @@ class LoginSerializer(serializers.Serializer):
         return {
             'email': user.email,
             'username': user.username,
-            'token': user.token
+            'token': user.token,
+            'type': user.type,
         }
-
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -73,7 +74,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('email', 'username', 'password', 'token')
+        fields = ('email', 'username', 'password', 'token', 'type',)
 
         read_only_fields = ('token',)
 
@@ -89,3 +90,4 @@ class UserSerializer(serializers.ModelSerializer):
         instance.save()
 
         return instance
+

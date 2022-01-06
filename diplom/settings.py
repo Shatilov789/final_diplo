@@ -139,6 +139,12 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'service.authentication.JWTAuthentication',
         ),
+    # 'DEFAULT_PARSER_CLASSES': (
+    #     'rest_framework_yaml.parsers.YAMLParser',
+    # ),
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework_yaml.renderers.YAMLRenderer',
+    ),
 }
 
 
