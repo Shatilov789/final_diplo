@@ -189,7 +189,7 @@ class Category(models.Model):
 
 
 class Product(models.Model):
-    name = models.CharField(max_length=80, verbose_name='Название')
+    name = models.CharField(max_length=80, verbose_name='Название', unique=True)
     category = models.ForeignKey(Category, verbose_name='Категория', related_name='products', blank=True,
                                  on_delete=models.CASCADE)
 

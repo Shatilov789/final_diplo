@@ -1,6 +1,6 @@
 from django.contrib.auth import authenticate
 from rest_framework import serializers
-from .models import User
+from .models import User, Product, Shop, Category, ProductInfo, Parameter, ProductParameter
 
 
 class RegistrationSerializer(serializers.ModelSerializer):
@@ -28,11 +28,11 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(max_length=128, write_only=True)
     token = serializers.CharField(max_length=255, read_only=True)
     type = serializers.CharField(max_length=255, read_only=True)
+
     def validate(self, data):
 
         email = data.get('email', None)
         password = data.get('password', None)
-
 
         if email is None:
             raise serializers.ValidationError(
@@ -91,3 +91,49 @@ class UserSerializer(serializers.ModelSerializer):
 
         return instance
 
+
+# class ListShop(serializers.ModelSerializer):
+#     class Meta:
+#         model = Shop
+#         fields = ('id', 'name', 'user', 'state',)
+#
+#
+# class ListCategory(serializers.ModelSerializer):
+#
+#     class Meta:
+#         model = Category
+#         fields = ('id', 'name', 'shops', )
+#
+
+class ListUser(serializers.ModelSerializer):
+
+    class Meta:
+        model = User
+        fields = ('id', 'email', 'position', 'type', 'token' )
+
+
+class ListProduct(serializers.ModelSerializer):
+
+    class Meta:
+        model = Product
+        fields = ('name', 'category',)
+
+# class ListProductInfo(serializers.ModelSerializer):
+#
+#     class Meta:
+#         model = ProductInfo
+#         fields = ('model', 'external_id','product', 'shop', 'quantity', 'price', 'price_rrc')
+
+
+class ListParameter(serializers.ModelSerializer):
+
+    class Meta:
+        model = Parameter
+        fields = ('name', )
+
+
+class ListProductParameter(serializers.ModelSerializer):
+
+    class Meta:
+        model = ProductParameter
+        fields = ('product_info', 'parameter','value')
